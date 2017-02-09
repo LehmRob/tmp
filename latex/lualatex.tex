@@ -1,0 +1,58 @@
+%% Dieser Sourcecode ist in der Kodierung UTF-8 zu speichern und mit LuaLaTeX
+%% zu kompilieren.
+ 
+\documentclass[a4paper]{scrartcl}
+ 
+\usepackage{polyglossia}
+\setdefaultlanguage[spelling=new, babelshorthands=true]{german}
+ 
+\usepackage{fontspec}
+\usepackage{unicode-math}
+\usepackage{luacode}
+\usepackage{hyperref}
+ 
+\setsansfont{Liberation Serif}
+\setmonofont{Inconsolata}
+%\setmathfont{Cambria Math}
+ 
+\title{Ein Testdokument}
+\author{Otto Normalverbraucher}
+\date{15. Januar 2014}
+ 
+\begin{document}
+ 
+\maketitle
+\tableofcontents
+ 
+\section{Schriftarten}
+Mit Lua\TeX{} lassen sich in Windows die systemeigenen Schriftarten verwenden,
+wie zum Beispiel Cambria, die über einen großen Satz mathematischer Zeichen für
+die Formeldarstellung verfügt, oder auch \textsf{Calibri} und \texttt{Consolas}.
+ 
+\section{Formeln}
+Lua\TeX{} ist auch ohne Formeln sehr nützlich und einfach zu verwenden. Grafiken,
+Tabellen, Querverweise aller Art, Literatur- und Stichwortverzeichnis sind
+kein Problem.
+ 
+Formeln sind etwas schwieriger, dennoch hier ein einfaches Beispiel:
+ 
+\begin{displaymath}
+  E = \frac{m_{0} c^{2}}{\sqrt{1-v^{2}/c^{2}}}
+\end{displaymath}
+ 
+\section{Lua-Code}
+Lua\TeX{} kann aber auch Lua-Programmcode ausführen. So erzeugt man zum Beispiel
+mit \texttt{directlua} die Zufallszahl \directlua{tex.print(math.random())}.
+Auch die Kreiszahl $\pi$ muss man nicht mehr auswendig wissen, sie hat den Wert
+\directlua{tex.print(math.pi)}.
+ 
+Mithilfe der \texttt{luacode}-Umgebung kann man sogar zählen, wie hier bis Sechzig:
+\begin{luacode}
+  for x=1,60 do
+    tex.print(x)
+  end
+\end{luacode}
+ 
+Hier ist der Schluss des Testdokuments.
+ 
+\end{document}

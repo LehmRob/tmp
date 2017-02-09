@@ -1,0 +1,79 @@
+\documentclass[12pt, a4paper]{scrartcl}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+% Setzen einiger Optionen für listings
+\lstset{
+  backgroundcolor=\color{lightgray!20!white},
+  basicstyle=\scriptsize\ttfamily,
+  keywordstyle=\bfseries\ttfamily\color{orange!40!black},
+  stringstyle=\color{blue}\ttfamily,
+  commentstyle=\color{green!40!black}\ttfamily,
+  emph={square}, 
+  emphstyle=\color{blue}\texttt,
+  emph={[2]root,base},
+  emphstyle={[2]\color{yac}\texttt},
+  showstringspaces=false,
+  flexiblecolumns=false,
+  tabsize=2,
+  numbers=left,
+  numberstyle=\tiny,
+  numberblanklines=false,
+  stepnumber=1,
+  numbersep=10pt,
+  xleftmargin=15pt,
+  breaklines=true,
+  prebreak={\mbox{$\hookleftarrow$}},  %% Vor Zeilenumbruch Zeichen setzen
+  breakautoindent=true         %% umbrochene Zeilen einrücken 
+}
+
+
+\title{Beispiel für listing}
+\author{Robert Lehmann}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\lstlistoflistings
+
+\section{\texttt{lstinputlisting}}
+%=====================================
+Der Befehl \texttt{lstinputlisting} wird wie in Listing \ref{lst:use_input} 
+verwendet.
+\begin{lstlisting}[language=TeX, caption={Verwendung lstinputlisting}, label={lst:use_input}]
+  \lstinputlisting[language=C]{example.c}
+\end{lstlisting}
+\lstinputlisting[language=C, caption={Beispiel für lstinputlisting},label={lst:input}]{example.c}
+
+\section{Verwendung der \texttt{lstlisting}-Umgebung}
+%========
+Ein Listing kann auch als Umgebung verwendet werden.
+\begin{lstlisting}[language=TeX, caption={Verwendung lstlisting Enviroment}, label={lst:use_enviroment}]
+  \begin{lstlisting}[language=Ruby]
+    class Hello
+      def say_hello
+        puts("Hello Hello")
+      end
+    end
+  \end{lstlsting}
+\end{lstlisting}
+Die Ausgabe sieht wie folgt aus.
+\begin{lstlisting}[language=Ruby, caption={Beispiel lstlisting Enviroment}, label={lst:enviroment}]
+  class Hello
+    def say_hello
+      puts("Hello Hello")
+    end
+  end
+\end{lstlisting}
+
+\section{Interessante Links}
+%=====
+\begin{itemize}
+  \item \url{http://texdoc.net/texmf-dist/doc/latex/listings/listings.pdf}
+\end{itemize}
+\end{document}

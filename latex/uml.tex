@@ -1,0 +1,40 @@
+\documentclass[12pt, a4paper]{scrartcl}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{tikz-uml}
+\usepackage{hyperref}
+
+\title{Beispiel für tikz-uml}
+\author{Robert Lehmann}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\listoffigures
+
+\section{Erstellung einer UML-Klasse}
+%====
+\begin{figure}[htb]
+  \centering
+  \begin{tikzpicture}
+    \umlclass{Example}
+    {
+      -- String: name
+    }
+    {
+      + getName()
+    }
+  \end{tikzpicture}
+\caption{Erstellung einer UML-Klasse}
+\end{figure}
+
+\section{Interessante Links}
+%====
+\begin{itemize}
+  \item \url{http://perso.ensta-paristech.fr/~kielbasi/tikzuml/index.php?lang=en}
+\end{itemize}
+\end{document}
