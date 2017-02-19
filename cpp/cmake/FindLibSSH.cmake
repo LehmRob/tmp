@@ -17,7 +17,6 @@ if (LIBSSH_LIBRARIES AND LIBSSH_INCLUDE_DIRS)
   # in cache already
   set(LIBSSH_FOUND TRUE)
 else (LIBSSH_LIBRARIES AND LIBSSH_INCLUDE_DIRS)
-
   find_path(LIBSSH_INCLUDE_DIR
     NAMES
     libssh/libssh.h
@@ -29,20 +28,19 @@ else (LIBSSH_LIBRARIES AND LIBSSH_INCLUDE_DIRS)
     ${CMAKE_INCLUDE_PATH}
     ${CMAKE_INSTALL_PREFIX}/include
 	)
-  
   find_library(SSH_LIBRARY
     NAMES
     ssh
     libssh
     PATHS
     /usr/lib
+	/usr/lib64
     /usr/local/lib
     /opt/local/lib
     /sw/lib
     ${CMAKE_LIBRARY_PATH}
     ${CMAKE_INSTALL_PREFIX}/lib
 	)
-
   if (LIBSSH_INCLUDE_DIR AND SSH_LIBRARY)
     set(SSH_FOUND TRUE)
   endif (LIBSSH_INCLUDE_DIR AND SSH_LIBRARY)

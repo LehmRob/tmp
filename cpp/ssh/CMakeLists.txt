@@ -1,4 +1,4 @@
-find_package(LibSSH REQUIRED)
+find_package(LibSSH)
 
-add_executable(simple_example simple_example.cpp)
-target_link_libraries(simple_example ${LIBSSH_LIBRARIES})
+add_executable(ssh_example ssh_example.cpp)
+target_link_libraries(ssh_example ${LIBSSH_LIBRARIES})

@@ -1,2 +1,2 @@
 add_subdirectory(spdlog)
-add_subdirectory(glog)
+#add_subdirectory(glog)
