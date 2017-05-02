@@ -11,8 +11,24 @@ int show_remote_uptime(ssh_session s) {
 
 	auto ret = ssh_channel_open_session(chan);
 	if (ret != SSH_OK) {
-		
+	  ssh_channel_free(chan);
+	  return SSH_ERROR;
 	}
+
+	ret = ssh_channel_request_exec(chan, "uptime");
+	if (ret != SSH_OK) {
+	  ssh_channel_close(chan);
+	  ssh_channel_free(chan);
+	  return SSH_ERROR;
+	}
+
+	char buf[256];
+	ret = ssh_channel_read(chan, buf, sizeof(buf), 0);
+	if (ret != SSH_OK) {
+	  ssh_channel_close(chan);
+	  ssh_channel_free(chan);
+	}
+
 	return SSH_OK;
 }
 
@@ -45,7 +61,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	
+	sho
 	
 	ssh_disconnect(my_session);
 	ssh_free(my_session);

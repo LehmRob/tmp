@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
 	fd_set fd_in;
 	char input[150];
 
-	for(;;) {
+ 	for(;;) {
 		FD_ZERO(&fd_in);
 		FD_SET(fdm, &fd_in);
 
