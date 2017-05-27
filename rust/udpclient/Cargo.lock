@@ -1,0 +1,4 @@
+[root]
+name = "udpclient"
+version = "0.1.0"
+
