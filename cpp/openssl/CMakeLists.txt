@@ -7,3 +7,5 @@ find_package(OpenSSL REQUIRED)
 
 add_executable(md5 md5.cpp)
 target_link_libraries(md5 ${OPENSSL_LIBRARIES})
+
+add_subdirectory(aes256)
