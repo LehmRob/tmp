@@ -1,0 +1,3 @@
+[submodule "cpp/net/pistache_example/3rdparty/pistache"]
+	path = cpp/net/pistache_example/3rdparty/pistache
+	url = https://github.com/oktal/pistache
