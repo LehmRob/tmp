@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package grpctest;
+
+service GrpcTester {
+  rpc DoIt(TesterRequest) returns (TesterReply) {}
+}
+
+message TesterRequest {
+  int32 type = 1;
+}
+
+message TesterReply {
+  string reply = 1;
+}
