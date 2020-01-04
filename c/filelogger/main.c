@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include <errno.h>
+#include <stdio.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -8,31 +8,24 @@ struct logger {
     FILE* file;
 };
 
-static int
-get_time(struct logger *l)
-{
+static int get_time(struct logger* l) {
     clock_t cur = clock();
 
     return (int)(cur - l->start_time) / CLOCKS_PER_SEC;
 }
 
-int 
-fl_write(struct logger* l, char* msg)
-{
-    int ret; 
+int fl_write(struct logger* l, char* msg) {
+    int ret;
 
     ret = fprintf(l->file, "[%d] %s\n", get_time(l), msg);
 
     if (ret < 0) {
         return ret;
     }
-    
     return 0;
 }
 
-int
-main(int ac, char** av) 
-{
+int main(int ac, char** av) {
     if (ac < 2) {
         fprintf(stderr, "Not enough argumnets\n");
         return EINVAL;
