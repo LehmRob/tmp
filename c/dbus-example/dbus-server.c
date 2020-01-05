@@ -55,7 +55,30 @@ const char *server_xml =
     "</node>\n";
 
 DBusHandlerResult server_message_handler(DBusConnection *conn, DBusMessage *msg, void *data) {
-    DBusHandlerResult result;
+    DBusHandlerResult result = DBUS_HANDLER_RESULT_HANDLED;
+    DBusMessage *reply = NULL;
+    DBusError err;
+
+#ifdef DEBUG
+    fprintf(stderr, "Got D-Bus request: %s.%s on %s\n",
+            dbus_message_get_interface(msg),
+            dbus_message_get_member(msg),
+            dbus_message_get_path(msg));
+#endif // DEBUG
+
+    // allocate the reply because we need it anyway
+    reply = dbus_message_new_method_return(msg);
+    if (!reply) {
+        return DBUS_HANDLER_RESULT_NEED_MEMORY;
+    }
+
+    dbus_error_init(&err);
+
+    if (dbus_message_is_method_call(msg, DBUS_INTERFACE_INTROSPECTABLE, "Introspect")) {
+        dbus_message_append_args(reply, 
+                DBUS_TYPE_STRING, server_xml,
+                DBUS_TYPE_INVALID);
+    }
 
     return result;
 }
