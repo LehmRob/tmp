@@ -1,3 +1,8 @@
+/*
+ * This example is inspired (or partly simple copied) by fbuihuu
+ * URL: https://github.com/fbuihuu/samples-dbus/blob/master/dbus-server.c
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
