@@ -5,9 +5,9 @@
 
 #include <stdbool.h>
 #include <stdio.h>
-#include <stderr.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <dbus/dbus.h>
 #include <dbus/dbus-glib-lowlevel.h>
@@ -56,7 +56,7 @@ DBUS_INTROSPECT_1_0_XML_DOCTYPE_DECL_NODE
 
 "</node>\n";
 
-int server_handle_get_property(DBusMessage *msg, DBusMessage **reply) {
+static int server_handle_get_property(DBusMessage *msg, DBusMessage **reply) {
     DBusError err;
     const char *interface;
     const char *property;
@@ -73,20 +73,27 @@ int server_handle_get_property(DBusMessage *msg, DBusMessage **reply) {
     }
 
     if (dbus_error_is_set(&err)) {
-        *reply = dbus_message_new_error(message, err.name, err.message);
-        // TODO needs to be completed
+        *reply = dbus_message_new_error(msg, err.name, err.message);
+        dbus_error_free(&err);
+        return -EIO;
+    }
+
+    *reply = dbus_message_new_method_return(msg);
+    if (*reply) {
+        return -ENOMEM;
+    }
+
+    if (!strcmp(property, "Version")) {
+        dbus_message_append_args(*reply, DBUS_TYPE_STRING, &version, DBUS_TYPE_INVALID);
     } else {
-        *reply = dbus_message_new_method_return(msg);
-        if (*reply) {
-            return -ENOMEM;
-        }
+        // Unknown property
+        return -EINVAL;
     }
 
     return 0;
-
 }
 
-int server_handle_introspect(DBusMessage *msg, DBusMessage **reply) {
+static int server_handle_introspect(DBusMessage *msg, DBusMessage **reply) {
     *reply = dbus_message_new_method_return(msg);
     if (!*reply) {
         return -ENOMEM;
@@ -118,7 +125,9 @@ DBusHandlerResult server_message_handler(DBusConnection *conn, DBusMessage *msg,
         }
     } else if (dbus_message_is_method_call(msg, DBUS_INTERFACE_PROPERTIES, "Get")) {
         int rc = server_handle_get_property(msg, &reply);
-        if (rc) {
+        if (rc == -EINVAL) {
+            result = DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+        } else if (rc != 0) {
             result = DBUS_HANDLER_RESULT_NEED_MEMORY;
             goto clean_up;
         }
