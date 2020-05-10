@@ -79,7 +79,7 @@ static int server_handle_get_property(DBusMessage *msg, DBusMessage **reply) {
     }
 
     *reply = dbus_message_new_method_return(msg);
-    if (*reply) {
+    if (!*reply) {
         return -ENOMEM;
     }
 
@@ -106,6 +106,17 @@ static int server_handle_introspect(DBusMessage *msg, DBusMessage **reply) {
     return 0;
 }
 
+static int server_handle_get_all_properties(DBusMessage *msg, DBusMessage **reply) {
+    DBusMessageIter array, dict, iter, variant;
+    const char *property = "Version";
+
+    dbus_message_iter_init_append(*reply, &iter);
+    dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY, "{sv}", &array);
+    dbus_message_iter_open_container(&array, DBUS_TYPE_DICT_ENTRY, NULL, &dict);
+    dbus_message_iter_append_basic(&dict, DBUS_TYPE_STRING, &property);
+    return 0;
+}
+
 DBusHandlerResult server_message_handler(DBusConnection *conn, DBusMessage *msg, void *data) {
     DBusHandlerResult result = DBUS_HANDLER_RESULT_HANDLED;
     DBusMessage *reply = NULL;
@@ -125,14 +136,20 @@ DBusHandlerResult server_message_handler(DBusConnection *conn, DBusMessage *msg,
         }
     } else if (dbus_message_is_method_call(msg, DBUS_INTERFACE_PROPERTIES, "Get")) {
         int rc = server_handle_get_property(msg, &reply);
-        if (rc == -EINVAL) {
-            result = DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-        } else if (rc != 0) {
-            result = DBUS_HANDLER_RESULT_NEED_MEMORY;
+        if (rc) {
+            if (rc == -EINVAL) {
+                result = DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+            } else {
+                result = DBUS_HANDLER_RESULT_NEED_MEMORY;
+            }
             goto clean_up;
         }
     } else if (dbus_message_is_method_call(msg, DBUS_INTERFACE_PROPERTIES, "GetAll")) {
-        // TODO Implement me
+        int rc = server_handle_get_all_properties(msg, &reply);
+        if (rc) {
+            result = DBUS_HANDLER_RESULT_NEED_MEMORY;
+            goto clean_up;
+        }
     }
 
     if (!reply) {
