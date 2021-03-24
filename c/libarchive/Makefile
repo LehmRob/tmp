@@ -10,7 +10,7 @@ $(TARGET): $(O)
 
 $(O):
 	@mkdir $(O)
-	@cd $(O) && cmake ..
+	@cd $(O) && cmake -D CMAKE_BUILD_TYPE=Debug ..
 
 .PHONY: clean
 clean: 
