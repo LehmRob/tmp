@@ -2,42 +2,17 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
+#include <errno.h>
 
 #include <archive.h>
 
 #define APP_NAME "untar"
 #define APP_VERSION "1.0.0"
 
-struct app_opts {
+struct appopts {
     char *filename;
-    char *outpath;
+    char *outdir;
 };
-
-static int parse_app_opts(int ac, char **av, struct app_opts *opts);
-static void app_opts_free(struct app_opts *opts);
-
-int main(int ac, char **av) {
-    struct app_opts opts;
-    int rc = 0;
-
-    rc = parse_app_opts(ac, av, &opts);
-    if (rc < 0) {
-        fprintf(stderr, "Can't parse options. Try -h\n");
-        rc = -1;
-        goto exit;
-    } else if (rc > 0) {
-        rc = 0;
-        goto exit;
-    }
-
-    printf("filename  %s\n", opts.filename);
-    printf("output directory %s\n", opts.outpath);
-
-exit:
-    app_opts_free(&opts);
-
-    return rc;
-}
 
 static void show_help(char *appname) {
     printf("usage: %s: optins\n", appname);
@@ -55,11 +30,11 @@ static struct option long_options[] = {
     {NULL, 0, 0, 0}
 };
 
-static int parse_app_opts(int ac, char **av, struct app_opts *opts) {
+static int parse_appopts(int ac, char **av, struct appopts *opts) {
     int optind = 0;
     int c;
 
-    opts->outpath = NULL;
+    opts->outdir = NULL;
     opts->filename = NULL;
 
     while ((c = getopt_long(ac, av, "C:f:hv", long_options, &optind)) != -1) {
@@ -75,11 +50,11 @@ static int parse_app_opts(int ac, char **av, struct app_opts *opts) {
                 break;
             case 'C':
                 if (optarg != NULL) {
-                    opts->outpath = calloc(strlen(optarg) + 1, sizeof(char));
-                    if (opts->outpath == NULL) {
+                    opts->outdir = calloc(strlen(optarg) + 1, sizeof(char));
+                    if (opts->outdir == NULL) {
                         return -1;
                     }
-                    strncpy(opts->outpath, optarg, strlen(optarg));
+                    strncpy(opts->outdir, optarg, strlen(optarg));
                 }
                 break;
             case 'h':
@@ -94,7 +69,7 @@ static int parse_app_opts(int ac, char **av, struct app_opts *opts) {
     return 0;
 }
 
-static void app_opts_free(struct app_opts *opts) {
+static void appopts_free(struct appopts *opts) {
     if (opts == NULL) {
         return;
     }
@@ -103,8 +78,96 @@ static void app_opts_free(struct app_opts *opts) {
         free(opts->filename);
     }
 
-    if (opts->outpath != NULL) {
-        free(opts->outpath);
+    if (opts->outdir != NULL) {
+        free(opts->outdir);
     }
+}
+
+struct untar {
+    struct archive *archive;
+    char *filename;
+    char *outdir;
+};
+
+static int untar_init(struct untar *u, struct appopts *opts) {
+    u->archive = NULL;
+    u->filename = NULL;
+    u->outdir = NULL;
+
+    u->archive = archive_read_new();
+    if (u->archive == NULL) {
+        return -ENOMEM;
+    }
+
+    size_t len = strlen(opts->filename);
+    u->filename = calloc(len + 1, sizeof(char));
+    if (u->filename == NULL) {
+        return -ENOMEM;
+    }
+
+    strncpy(opts->filename, u->filename, len);
+
+    len = strlen(opts->outdir);
+    u->outdir = calloc(len + 1, sizeof(char));
+    if (u->outdir == NULL) {
+        return -ENOMEM;
+    }
+
+    strncpy(opts->outdir, u->outdir, len);
+
+    return 0;
+}
+
+static void untar_free(struct untar *u) {
+    if (u == NULL) {
+        return;
+    }
+
+    if (u->archive != NULL) {
+        archive_read_free(u->archive);
+    }
+
+    if (u->archive != NULL) {
+        free(u->filename);
+    }
+
+    if (u->outdir != NULL) {
+        free(u->outdir);
+    }
+}
+
+
+int main(int ac, char **av) {
+    struct appopts opts;
+    struct untar untar;
+    int rc = 0;
+
+    rc = parse_appopts(ac, av, &opts);
+    if (rc < 0) {
+        fprintf(stderr, "Can't parse options. Try -h\n");
+        rc = -1;
+        goto exit;
+    } else if (rc > 0) {
+        rc = 0;
+        goto exit;
+    }
+
+    if (opts.filename == NULL || opts.outdir == NULL) {
+        fprintf(stderr, "Invalid option. Trye -h\n");
+        goto exit;
+    }
+    
+    rc = untar_init(&untar, &opts);
+    if (rc != 0) {
+        goto free_untar;
+    }
+
+free_untar:
+    untar_free(&untar);
+
+exit:
+    appopts_free(&opts);
+
+    return rc;
 }
 
