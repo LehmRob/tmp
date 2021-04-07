@@ -5,6 +5,7 @@
 #include <errno.h>
 
 #include <archive.h>
+#include <archive_entry.h>
 
 #define APP_NAME "untar"
 #define APP_VERSION "1.0.0"
@@ -99,6 +100,10 @@ static int untar_init(struct untar *u, struct appopts *opts) {
         return -ENOMEM;
     }
 
+    /* Enable all formats */
+    /*archive_read_support_filter_all(u->archive);*/
+    archive_read_support_format_all(u->archive);
+
     size_t len = strlen(opts->filename);
     u->filename = calloc(len + 1, sizeof(char));
     if (u->filename == NULL) {
@@ -114,6 +119,22 @@ static int untar_init(struct untar *u, struct appopts *opts) {
     }
 
     strncpy(opts->outdir, u->outdir, len);
+
+    return 0;
+}
+
+static int untar_print(struct untar *u) {
+    struct archive_entry *entry = NULL;
+    int rc = ARCHIVE_OK;
+
+    while (rc != ARCHIVE_EOF) {
+        rc = archive_read_next_header(u->archive, &entry);
+        if (rc != ARCHIVE_OK) {
+            continue;
+        }
+
+        printf("entry %s\n", archive_entry_pathname(entry));
+    }
 
     return 0;
 }
@@ -158,6 +179,11 @@ int main(int ac, char **av) {
     }
     
     rc = untar_init(&untar, &opts);
+    if (rc != 0) {
+        goto free_untar;
+    }
+
+    rc = untar_print(&untar);
     if (rc != 0) {
         goto free_untar;
     }
