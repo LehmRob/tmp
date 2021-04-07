@@ -25,7 +25,7 @@ fn main() {
             } else if arg == "--version" {
                 show_version();
             } else {
-                println!("Unknown argument"
+                println!("Unknown argument");
             }
         },
         _ => {
