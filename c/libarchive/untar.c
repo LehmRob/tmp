@@ -1,8 +1,8 @@
+#include <errno.h>
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <getopt.h>
 #include <string.h>
-#include <errno.h>
 
 #include <archive.h>
 #include <archive_entry.h>
@@ -23,13 +23,9 @@ static void show_help(char *appname) {
     printf("-v, --version \t\tShow version\n");
 }
 
-static struct option long_options[] = {
-    {"file", required_argument, 0, 'f'},
-    {"directory", required_argument, 0, 'C'},
-    {"help", no_argument, 0, 'h'},
-    {"version", no_argument, 0, 'v'},
-    {NULL, 0, 0, 0}
-};
+static struct option long_options[] = {{"file", required_argument, 0, 'f'},
+    {"directory", required_argument, 0, 'C'}, {"help", no_argument, 0, 'h'},
+    {"version", no_argument, 0, 'v'}, {NULL, 0, 0, 0}};
 
 static int parse_appopts(int ac, char **av, struct appopts *opts) {
     int optind = 0;
@@ -40,34 +36,39 @@ static int parse_appopts(int ac, char **av, struct appopts *opts) {
 
     while ((c = getopt_long(ac, av, "C:f:hv", long_options, &optind)) != -1) {
         switch (c) {
-            case 'f':
-                if (optarg != NULL) {
-                    opts->filename = calloc(strlen(optarg) + 1, sizeof(char));
-                    if (opts->filename == NULL) {
-                        return -1;
-                    }
-                    strncpy(opts->filename, optarg, strlen(optarg));
+        case 'f':
+            if (optarg != NULL) {
+                opts->filename = calloc(strlen(optarg) + 1, sizeof(char));
+                if (opts->filename == NULL) {
+                    return -1;
                 }
-                break;
-            case 'C':
-                if (optarg != NULL) {
-                    opts->outdir = calloc(strlen(optarg) + 1, sizeof(char));
-                    if (opts->outdir == NULL) {
-                        return -1;
-                    }
-                    strncpy(opts->outdir, optarg, strlen(optarg));
+                strncpy(opts->filename, optarg, strlen(optarg));
+            }
+            break;
+        case 'C':
+            if (optarg != NULL) {
+                opts->outdir = calloc(strlen(optarg) + 1, sizeof(char));
+                if (opts->outdir == NULL) {
+                    return -1;
                 }
-                break;
-            case 'h':
-                show_help(APP_NAME);
-                return 1;
-            case 'v':
-                printf("%s -- v%s\n", APP_NAME, APP_VERSION);
-                return 1;
+                strncpy(opts->outdir, optarg, strlen(optarg));
+            }
+            break;
+        case 'h':
+            show_help(APP_NAME);
+            return 1;
+        case 'v':
+            printf("%s -- v%s\n", APP_NAME, APP_VERSION);
+            return 1;
         }
     }
 
     return 0;
+}
+
+static void show_options(struct appopts *opts) {
+    printf("Filename :%s\n", opts->filename);
+    printf("Output :%s\n", opts->outdir);
 }
 
 static void appopts_free(struct appopts *opts) {
@@ -120,6 +121,11 @@ static int untar_init(struct untar *u, struct appopts *opts) {
 
     strncpy(opts->outdir, u->outdir, len);
 
+    if (archive_read_open_filename(u->archive, u->filename, 10240)) {
+        fprintf(stderr, "Unable to open archive %s\n", archive_error_string(u->archive));
+        return -EIO;
+    }
+
     return 0;
 }
 
@@ -128,8 +134,13 @@ static int untar_print(struct untar *u) {
     int rc = ARCHIVE_OK;
 
     while (rc != ARCHIVE_EOF) {
+        printf("Reading entry\n");
         rc = archive_read_next_header(u->archive, &entry);
-        if (rc != ARCHIVE_OK) {
+        printf("Return value %d\n", rc);
+        if (rc == ARCHIVE_FATAL) {
+            fprintf(stderr, "An error happened %s\n", archive_error_string(u->archive));
+            return -EINVAL;
+        } else if (rc != ARCHIVE_EOF) {
             continue;
         }
 
@@ -157,7 +168,6 @@ static void untar_free(struct untar *u) {
     }
 }
 
-
 int main(int ac, char **av) {
     struct appopts opts;
     struct untar untar;
@@ -173,11 +183,13 @@ int main(int ac, char **av) {
         goto exit;
     }
 
+    show_options(&opts);
+
     if (opts.filename == NULL || opts.outdir == NULL) {
-        fprintf(stderr, "Invalid option. Trye -h\n");
+        fprintf(stderr, "Invalid option. Try -h\n");
         goto exit;
     }
-    
+
     rc = untar_init(&untar, &opts);
     if (rc != 0) {
         goto free_untar;
@@ -196,4 +208,3 @@ exit:
 
     return rc;
 }
-
