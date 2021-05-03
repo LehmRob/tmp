@@ -20,6 +20,7 @@ typedef enum {
     PROP_FILE_ERR,
     PROP_EOF,
     PROP_MEM_ERR,
+    PROP_NO_SEP,
 } prop_rc;
 
 prop_rc propertiesReadFile(properties *p, const char* filename);
