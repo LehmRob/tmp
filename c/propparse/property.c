@@ -1,5 +1,6 @@
 #include "property.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -21,6 +22,69 @@ static prop_rc initStruct(properties *p) {
     return PROP_OK;
 }
 
+static prop_rc addKevValue(properties *p, keyval *kv) {
+    p->content[p->len].key = kv->key;
+    p->content[p->len].val = kv->key;
+
+    p->len++;
+    if (p->len > p->cap) {
+        /* Relloc storate */
+        p->cap += defCap;
+
+        keyval* ptr = reallocarray(p->content, sizeof(keyval), p->cap);
+        if (ptr == NULL) {
+            p->cap -= defCap;
+            return PROP_MEM_ERR;
+        }
+        p->content = ptr;
+    }
+
+    return PROP_OK;
+}
+
+static char* cleanupWhitespace(char *data) {
+    char* start = NULL;
+
+    /* is it neccessary to trim trailing whitespaces */
+    if (isblank(data[0])) {
+        /* check for whitespaces in the front first */
+        for (int i = 0; i < strlen(data); i++) {
+            if (!isblank(data[i])) {
+                /* check the start of the string */
+                start = &data[i];
+                break;
+            }
+        }
+    } else {
+        start = data;
+    }
+
+    /* check for trailing whitespaces */
+    char* trail = strrchr(start, ' ');
+    if (trail != NULL) {
+        *trail = '\0';
+    } else {
+        trail = strrchr(start, '\t');
+        if (trail != NULL) {
+            *trail = '\0';
+        }
+    }
+
+    size_t len = strlen(start) + 1;
+
+    /* create a buffer for copy the actual string back and forth */
+    char* buf = calloc(len, sizeof(char));
+    if (buf == NULL) {
+        return NULL;
+    }
+
+    strncpy(buf, start, len);
+    strncpy(data, buf, len);
+    free(buf);
+
+    return data;
+}
+
 static prop_rc parseKeyValue(char* line, keyval *kv) {
     /* first thing we need to do is to find the seperator between key and value.
      * this parser can '=' or ':' with 0-N whitespaces for separation
@@ -36,8 +100,6 @@ static prop_rc parseKeyValue(char* line, keyval *kv) {
     size_t keylen = sep - line;
     size_t vallen = strlen(line) - keylen - 1;
 
-    printf("keylen %d; vallen %d\n", keylen, vallen);
-
     char* key = calloc(keylen + 1, sizeof(char));
     if (key == NULL) {
         return PROP_MEM_ERR;
@@ -48,13 +110,23 @@ static prop_rc parseKeyValue(char* line, keyval *kv) {
         return PROP_MEM_ERR;
     }
 
+    /* do 0 termination of the string */
+    key[keylen] = '\0';
+    val[vallen] = '\0';
+
     strncpy(key, line, keylen);
     strncpy(val, sep + 1, vallen);
 
-    
+    kv->key = cleanupWhitespace(key);
+    kv->val = cleanupWhitespace(val);
 
     return PROP_OK;
 }
+
+static void keyValueStr(keyval *kv) {
+    printf("key: %s val: %s\n", kv->key, kv->val);
+}
+
 
 static prop_rc parseNextLine(properties *p, FILE *fp) {
     size_t linesize;
@@ -78,6 +150,10 @@ static prop_rc parseNextLine(properties *p, FILE *fp) {
     if (rc != PROP_OK) {
         return rc;
     }
+
+    keyValueStr(&kv);
+
+    rc = addKevValue(p, &kv);
 
     return PROP_OK;
 }
@@ -114,12 +190,17 @@ rcexit:
 }
 
 void propertiesCleanUp(properties *p) {
-    free(p->line);
-    
     for (int i = 0; i < p->len; i++) {
-        free(p->content->key);
-        free(p->content->val);
+        printf("Free index %d\n", i);
+        char* key = p->content[i].key;
+        char* val = p->content[i].val;
+        printf("Free ptr %p\n", key);
+        printf("Free ptr %p\n", val);
+        free(key);
+        free(val);
+        printf("Freed index %d\n", i);
     }
 
+    free(p->line);
     free(p->content);
 }

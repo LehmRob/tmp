@@ -2,3 +2,4 @@ test = hello
 email: test@example.com
 name=max Mustermannne  
 access=testing:
+  thisis=atest
