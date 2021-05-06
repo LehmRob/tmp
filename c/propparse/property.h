@@ -9,10 +9,9 @@ typedef struct {
 } keyval;
 
 typedef struct {
-    keyval *content;
+    keyval* content;
     size_t len;
     size_t cap;
-    char* line; /* buffer for parsing the complete line */
 } properties;
 
 typedef enum {

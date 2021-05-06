@@ -17,21 +17,20 @@ static prop_rc initStruct(properties *p) {
     }
 
     p->cap = defCap;
-    p->line = NULL;
 
     return PROP_OK;
 }
 
-static prop_rc addKevValue(properties *p, keyval *kv) {
+static prop_rc addKeyValue(properties *p, keyval *kv) {
     p->content[p->len].key = kv->key;
-    p->content[p->len].val = kv->key;
+    p->content[p->len].val = kv->val;
 
     p->len++;
     if (p->len > p->cap) {
         /* Relloc storate */
         p->cap += defCap;
 
-        keyval* ptr = reallocarray(p->content, sizeof(keyval), p->cap);
+        keyval *ptr = reallocarray(p->content, sizeof(keyval), p->cap);
         if (ptr == NULL) {
             p->cap -= defCap;
             return PROP_MEM_ERR;
@@ -130,32 +129,38 @@ static void keyValueStr(keyval *kv) {
 
 static prop_rc parseNextLine(properties *p, FILE *fp) {
     size_t linesize;
+    char *line = NULL;
+    prop_rc rc = PROP_OK;
 
-    ssize_t rbytes = getline(&p->line, &linesize, fp);
+    ssize_t rbytes = getline(&line, &linesize, fp);
     if (rbytes < 0) {
         if (errno == 0) {
-            return PROP_EOF;
+            rc = PROP_EOF;
+            goto exit;
         }
-        return PROP_FILE_ERR;
+        rc = PROP_FILE_ERR;
+        goto exit;
     }
 
     /* strip trailing newline characters */
-    char *cr = strrchr(p->line, '\n');
+    char *cr = strrchr(line, '\n');
     if (cr != NULL) {
         *cr = '\0';
     }
 
     keyval kv;
-    prop_rc rc = parseKeyValue(p->line, &kv);
+    rc = parseKeyValue(line, &kv);
     if (rc != PROP_OK) {
-        return rc;
+        goto exit; 
     }
 
+
     keyValueStr(&kv);
+    rc = addKeyValue(p, &kv);
 
-    rc = addKevValue(p, &kv);
-
-    return PROP_OK;
+exit:
+    free(line);
+    return rc;
 }
 
 prop_rc propertiesReadFile(properties *p, const char* filename) {
@@ -191,16 +196,10 @@ rcexit:
 
 void propertiesCleanUp(properties *p) {
     for (int i = 0; i < p->len; i++) {
-        printf("Free index %d\n", i);
-        char* key = p->content[i].key;
-        char* val = p->content[i].val;
-        printf("Free ptr %p\n", key);
-        printf("Free ptr %p\n", val);
-        free(key);
-        free(val);
-        printf("Freed index %d\n", i);
+        keyval kv = p->content[i];
+        free(kv.key);
+        free(kv.val);
     }
 
-    free(p->line);
     free(p->content);
 }
