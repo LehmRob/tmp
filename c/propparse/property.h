@@ -1,28 +1,24 @@
 #ifndef __PROPERTY_H__
 #define __PROPERTY_H__
 
+#include "rc.h"
+
 #include <stdlib.h>
 
 typedef struct {
-    char* key;
-    char* val;
+    char *key;
+    char *val;
 } keyval;
 
 typedef struct {
-    keyval* content;
+    keyval *content;
     size_t len;
     size_t cap;
 } properties;
 
-typedef enum {
-    PROP_OK = 0,
-    PROP_FILE_ERR,
-    PROP_EOF,
-    PROP_MEM_ERR,
-    PROP_NO_SEP,
-} prop_rc;
-
-prop_rc propertiesReadFile(properties *p, const char* filename);
-void propertiesCleanUp(properties *p);
+prop_rc props_new(properties *p);
+prop_rc props_read_file(properties *p, const char *filename);
+prop_rc props_add(properties *p, const char *key, const char *value);
+void props_cleanup(properties *p);
 
 #endif /*__PROPERTY_H__*/

@@ -9,14 +9,25 @@
 
 int main(int ac, char** av) {
     properties props;
-    prop_rc rc = propertiesReadFile(&props, av[1]);
-
-    if (rc != PROP_OK) { 
-        propertiesCleanUp(&props);
+    prop_rc rc = props_new(&props);
+    if (rc != PROP_OK) {
         return rc;
     }
 
-    propertiesCleanUp(&props);
+    rc = props_read_file(&props, av[1]);
+    if (rc != PROP_OK) {
+        goto cleanup;
+    }
 
-    return 0;
+    rc = props_add(&props, "thisis", "test");
+    if (rc != PROP_OK) {
+        printf("Error occured %d", rc);
+        goto cleanup;
+    }
+
+
+cleanup:
+    props_cleanup(&props);
+
+    return rc;
 }

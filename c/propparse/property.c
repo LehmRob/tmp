@@ -4,11 +4,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <errno.h>
 
 const size_t defCap = 10;
 
-static prop_rc initStruct(properties *p) {
+static prop_rc init_struct(properties *p) {
     p->len = 0;
 
     p->content = calloc(defCap, sizeof(keyval));
@@ -21,7 +22,7 @@ static prop_rc initStruct(properties *p) {
     return PROP_OK;
 }
 
-static prop_rc addKeyValue(properties *p, keyval *kv) {
+static prop_rc add_keyval(properties *p, keyval *kv) {
     p->content[p->len].key = kv->key;
     p->content[p->len].val = kv->val;
 
@@ -41,7 +42,7 @@ static prop_rc addKeyValue(properties *p, keyval *kv) {
     return PROP_OK;
 }
 
-static char* cleanupWhitespace(char *data) {
+static char* clean_whitespace(char *data) {
     char* start = NULL;
 
     /* is it neccessary to trim trailing whitespaces */
@@ -84,7 +85,7 @@ static char* cleanupWhitespace(char *data) {
     return data;
 }
 
-static prop_rc parseKeyValue(char* line, keyval *kv) {
+static prop_rc parse_keyval(char* line, keyval *kv) {
     /* first thing we need to do is to find the seperator between key and value.
      * this parser can '=' or ':' with 0-N whitespaces for separation
      */
@@ -116,18 +117,28 @@ static prop_rc parseKeyValue(char* line, keyval *kv) {
     strncpy(key, line, keylen);
     strncpy(val, sep + 1, vallen);
 
-    kv->key = cleanupWhitespace(key);
-    kv->val = cleanupWhitespace(val);
+    kv->key = clean_whitespace(key);
+    kv->val = clean_whitespace(val);
 
     return PROP_OK;
 }
 
-static void keyValueStr(keyval *kv) {
+static void keyvalstr(keyval *kv) {
     printf("key: %s val: %s\n", kv->key, kv->val);
 }
 
+static bool has_key(properties *p, const char *key) {
+    for (int i = 0; i < p->len; i++) {
+        keyval elem = p->content[i];
+        if (strstr(elem.key, key) != NULL) {
+            return true;
+        }
+    }
 
-static prop_rc parseNextLine(properties *p, FILE *fp) {
+    return false;
+}
+
+static prop_rc parse_next_line(properties *p, FILE *fp) {
     size_t linesize;
     char *line = NULL;
     prop_rc rc = PROP_OK;
@@ -149,25 +160,26 @@ static prop_rc parseNextLine(properties *p, FILE *fp) {
     }
 
     keyval kv;
-    rc = parseKeyValue(line, &kv);
+    rc = parse_keyval(line, &kv);
     if (rc != PROP_OK) {
-        goto exit; 
+        goto exit;
     }
 
 
-    keyValueStr(&kv);
-    rc = addKeyValue(p, &kv);
+    keyvalstr(&kv);
+    rc = add_keyval(p, &kv);
 
 exit:
     free(line);
     return rc;
 }
 
-prop_rc propertiesReadFile(properties *p, const char* filename) {
-    prop_rc rc = initStruct(p);
-    if (rc != PROP_OK) {
-        return rc;
-    }
+prop_rc props_new(properties *p) {
+    return init_struct(p);
+}
+
+prop_rc props_read_file(properties *p, const char* filename) {
+    prop_rc rc = PROP_OK;
 
     FILE *fd = fopen(filename, "r");
     if (fd == NULL) {
@@ -175,9 +187,8 @@ prop_rc propertiesReadFile(properties *p, const char* filename) {
         goto rcexit;
     }
 
-    rc = PROP_OK;
     while (rc == PROP_OK) {
-        rc = parseNextLine(p, fd);
+        rc = parse_next_line(p, fd);
     }
 
     if (rc != PROP_EOF) {
@@ -194,7 +205,7 @@ rcexit:
     return rc;
 }
 
-void propertiesCleanUp(properties *p) {
+void props_cleanup(properties *p) {
     for (int i = 0; i < p->len; i++) {
         keyval kv = p->content[i];
         free(kv.key);
@@ -202,4 +213,12 @@ void propertiesCleanUp(properties *p) {
     }
 
     free(p->content);
+}
+
+prop_rc props_add(properties *p, const char *key, const char *val) {
+    if (has_key(p, key)) {
+        return PROP_DUPL;
+    }
+
+    return PROP_OK;
 }

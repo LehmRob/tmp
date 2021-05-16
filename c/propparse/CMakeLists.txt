@@ -12,6 +12,7 @@ endif()
 list(APPEND propparse_srcs
     main.c
     property.c
+    rc.c
     )
 
 add_executable(propparse ${propparse_srcs})
