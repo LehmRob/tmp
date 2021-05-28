@@ -35,10 +35,19 @@ void App::loop(void) {
             continue;
         }
 
-        if (event.type == SDL_WINDOWEVENT &&
-            event.window.event == SDL_WINDOWEVENT_CLOSE) {
-            quit();
+        if (event.type == SDL_WINDOWEVENT) {
+            handleWindowEvent(&event);
         }
+    }
+}
+
+void App::handleWindowEvent(SDL_Event *event) {
+    switch (event->window.event) {
+    case SDL_WINDOWEVENT_CLOSE:
+        quit();
+    case SDL_WINDOWEVENT_MOVED:
+        std::printf("Window is moved\n");
+        break;
     }
 }
 

@@ -14,8 +14,7 @@ class App {
 
   private:
     App(SDL_Window *window);
-
-    void signalHandler(int);
+    void handleWindowEvent(SDL_Event *event);
 
     SDL_Window *window;
     bool running;
