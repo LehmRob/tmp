@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,7 +17,7 @@ typedef struct tree {
     node_t *root;
 } tree_t;
 
-static node_t *create_node(int index, char *value) {
+static node_t *create_node(int index, const char *value) {
     node_t *ptr;
 
     ptr = (node_t *)malloc(sizeof(node_t));
@@ -33,45 +34,102 @@ static node_t *create_node(int index, char *value) {
     return ptr;
 }
 
-/*static void free_node(node_t *node) { free(node); }*/
-
-static int insert_node(node_t *parent, node_t *node) {
+static int insert_node(node_t *parent, int index, const char *name) {
     // choose left or richt
-    if (parent->index < node->index) {
+    if (index > parent->index) {
         if (parent->right != NULL) {
-            return insert_node(parent->right, node);
+            return insert_node(parent->right, index, name);
         }
+
+        node_t *node = create_node(index, name);
+        if (node == NULL) {
+            return -ENOMEM;
+        }
+
         parent->right = node;
-        return 0;
+
+    } else if (index < parent->index) {
+        if (parent->left != NULL) {
+            return insert_node(parent->left, index, name);
+        }
+
+        node_t *node = create_node(index, name);
+        if (node == NULL) {
+            return -ENOMEM;
+        }
+
+        parent->left = node;
+
+    } else {
+        strcpy(parent->name, name);
     }
 
-    if (parent->left != NULL) {
-        return insert_node(parent->left, node);
-    }
-    parent->left = node;
     return 0;
 }
 
-static int tree_insert(tree_t *tree, node_t *node) {
+static int tree_insert(tree_t *tree, int index, const char *name) {
     if (tree->root == NULL) {
+        node_t *node = create_node(index, name);
+        if (node == NULL) {
+            return -ENOMEM;
+        }
+
         tree->root = node;
-        tree->root->height = 0;
+
         return 0;
     }
 
-    return insert_node(tree->root, node);
+    return insert_node(tree->root, index, name);
 }
 
 static void node_print(node_t *node) {
-    if (node->left != NULL) {
-        printf("L ");
-        node_print(node->left);
-    } else if (node->right != NULL) {
-        printf("R ");
-        node_print(node->right);
+    // check if we reached the end of the tree
+    if (node == NULL) {
+        return;
     }
 
-    printf("[%d] %s\n", node->index, node->name);
+    printf("[%d] %s", node->index, node->name);
+
+    if (node->left != NULL) {
+        printf("<-- ");
+        node_print(node->left);
+        printf("\n");
+    }
+
+    if (node->right != NULL) {
+        printf("--> ");
+        node_print(node->right);
+        printf("\n");
+    }
+}
+
+static int node_get(node_t *node, int index, char *resp) {
+    if (node == NULL) {
+        return -EINVAL;
+    }
+
+    if (node->index == index) {
+        strcpy(resp, node->name);
+        return 0;
+    }
+
+    if (node->left != NULL) {
+        if (node_get(node->left, index, resp) == 0) {
+            return 0;
+        }
+    }
+
+    if (node->right != NULL) {
+        if (node_get(node->right, index, resp) == 0) {
+            return 0;
+        }
+    }
+
+    return -ENOKEY;
+}
+
+static int tree_get(tree_t *tree, int index, char *resp) {
+    return node_get(tree->root, index, resp);
 }
 
 static void tree_print(tree_t *tree) { node_print(tree->root); }
@@ -80,38 +138,48 @@ int main(int ac, char **av) {
     (void)ac;
     (void)av;
 
-    printf("hello world\n");
-
     tree_t tree;
 
-    node_t *node1 = create_node(1, "helloworld");
-    if (node1 == NULL) {
-        return -1;
+    if (tree_insert(&tree, 5, "robert") != 0) {
+        fprintf(stderr, "Something bad happendes\n");
+        exit(EXIT_FAILURE);
     }
 
-    node_t *node2 = create_node(2, "jo");
-    if (node2 == NULL) {
-        return -1;
+    if (tree_insert(&tree, 1, "sarah") != 0) {
+        fprintf(stderr, "Something bad happendes\n");
+        exit(EXIT_FAILURE);
     }
 
-    node_t *node0 = create_node(0, "thisis");
-    if (node0 == NULL) {
-        return -1;
+    if (tree_insert(&tree, 8, "max") != 0) {
+        fprintf(stderr, "Something bad happendes\n");
+        exit(EXIT_FAILURE);
     }
 
-    if (tree_insert(&tree, node1) != 0) {
-        return 1;
+    if (tree_insert(&tree, 13, "tim") != 0) {
+        fprintf(stderr, "Something bad happendes\n");
+        exit(EXIT_FAILURE);
     }
 
-    if (tree_insert(&tree, node2) != 0) {
-        return 1;
-    }
-
-    if (tree_insert(&tree, node0) != 0) {
-        return 1;
+    if (tree_insert(&tree, 2, "tom") != 0) {
+        fprintf(stderr, "Something bad happendes\n");
+        exit(EXIT_FAILURE);
     }
 
     tree_print(&tree);
+
+    char resp[MAX_NAME_SIZE];
+
+    if (tree_get(&tree, 8, resp) != 0) {
+        fprintf(stderr, "Something bad happendes\n");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Found name %s\n", resp);
+
+    if (tree_get(&tree, 9, resp) == 0) {
+        fprintf(stderr, "Something bad happendes\n");
+        exit(EXIT_FAILURE);
+    }
 
     return 0;
 }
