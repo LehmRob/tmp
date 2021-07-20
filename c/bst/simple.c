@@ -132,6 +132,13 @@ static int tree_get(tree_t *tree, int index, char *resp) {
     return node_get(tree->root, index, resp);
 }
 
+static int tree_delete(tree_t *tree, int index) {
+    (void)tree;
+    (void)index;
+
+    return 0;
+}
+
 static void tree_print(tree_t *tree) { node_print(tree->root); }
 
 int main(int ac, char **av) {
@@ -177,6 +184,11 @@ int main(int ac, char **av) {
     printf("Found name %s\n", resp);
 
     if (tree_get(&tree, 9, resp) == 0) {
+        fprintf(stderr, "Something bad happendes\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (tree_delete(&tree, 8) != 0) {
         fprintf(stderr, "Something bad happendes\n");
         exit(EXIT_FAILURE);
     }
