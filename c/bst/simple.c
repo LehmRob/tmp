@@ -35,7 +35,7 @@ static node_t *create_node(int index, const char *value) {
 }
 
 static int insert_node(node_t *parent, int index, const char *name) {
-    // choose left or richt
+    // choose left or right
     if (index > parent->index) {
         if (parent->right != NULL) {
             return insert_node(parent->right, index, name);
@@ -132,11 +132,59 @@ static int tree_get(tree_t *tree, int index, char *resp) {
     return node_get(tree->root, index, resp);
 }
 
-static int tree_delete(tree_t *tree, int index) {
-    (void)tree;
-    (void)index;
+static node_t* node_find_left_leaf(node_t *node) {
+    if (node->left != NULL) {
+        node = node->left;
+        return node_find_left_leaf(node);
+    }
+
+    return node;
+}
+
+static void node_free(node_t *node) {
+    free(node);
+}
+
+static int node_delete(node_t *current, int index) {
+    if (current->index > index) {
+        return node_delete(current, index);
+    } 
+
+    if (current->index < index) {
+        return node_delete(current, index);
+    }
+
+    // there are different cases for deletion
+    // 1) delete a leaf (left and right are NULL)
+    // 2) delete a node with one child node
+    // 3) delete a node with two child nodes
+    if (current->left != NULL && current->right != NULL) {
+        node_t *successor = node_find_left_leaf(current->right);
+        current->index = successor->index;
+        strcpy(current->name, successor->name);
+        return node_delete(successor, successor->index);
+    } else if (current->left != NULL) {
+        current->index = current->left->index;
+        strcpy(current->name, current->left->name);
+        current->left = current->left->left;
+        node_free(current->left);
+    } else if (current->right != NULL) {
+        current->index = current->right->index;
+        strcpy(current->name, current->right->name);
+        current->right = current->right->right;
+        node_free(current->right);
+    } else {
+        node_free(current);
+    }
+
+
 
     return 0;
+}
+
+static int tree_delete(tree_t *tree, int index) {
+
+    return node_delete(tree->root, index);
 }
 
 static void tree_print(tree_t *tree) { node_print(tree->root); }
@@ -188,10 +236,14 @@ int main(int ac, char **av) {
         exit(EXIT_FAILURE);
     }
 
-    if (tree_delete(&tree, 8) != 0) {
+    printf("after get\n");
+
+    if (tree_delete(&tree, 5) != 0) {
         fprintf(stderr, "Something bad happendes\n");
         exit(EXIT_FAILURE);
     }
+
+    tree_print(&tree);
 
     return 0;
 }
