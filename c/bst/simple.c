@@ -26,7 +26,7 @@ static node_t *create_node(int index, const char *value) {
     }
 
     ptr->index = index;
-    strcpy(ptr->name, value);
+    strncpy(ptr->name, value, MAX_NAME_SIZE);
     ptr->left = NULL;
     ptr->right = NULL;
     ptr->height = 0;
@@ -61,7 +61,7 @@ static int insert_node(node_t *parent, int index, const char *name) {
         parent->left = node;
 
     } else {
-        strcpy(parent->name, name);
+        strncpy(parent->name, name, MAX_NAME_SIZE);
     }
 
     return 0;
@@ -109,7 +109,7 @@ static int node_get(node_t *node, int index, char *resp) {
     }
 
     if (node->index == index) {
-        strcpy(resp, node->name);
+        strncpy(resp, node->name, MAX_NAME_SIZE);
         return 0;
     }
 
@@ -132,7 +132,7 @@ static int tree_get(tree_t *tree, int index, char *resp) {
     return node_get(tree->root, index, resp);
 }
 
-static node_t* node_find_left_leaf(node_t *node) {
+static node_t *node_find_left_leaf(node_t *node) {
     if (node->left != NULL) {
         node = node->left;
         return node_find_left_leaf(node);
@@ -141,17 +141,15 @@ static node_t* node_find_left_leaf(node_t *node) {
     return node;
 }
 
-static void node_free(node_t *node) {
-    free(node);
-}
+static void node_free(node_t *node) { free(node); }
 
 static int node_delete(node_t *current, int index) {
-    if (current->index > index) {
-        return node_delete(current, index);
-    } 
-
     if (current->index < index) {
-        return node_delete(current, index);
+        return node_delete(current->right, index);
+    }
+
+    if (current->index > index) {
+        return node_delete(current->left, index);
     }
 
     // there are different cases for deletion
@@ -161,31 +159,29 @@ static int node_delete(node_t *current, int index) {
     if (current->left != NULL && current->right != NULL) {
         node_t *successor = node_find_left_leaf(current->right);
         current->index = successor->index;
-        strcpy(current->name, successor->name);
+        strncpy(current->name, successor->name, MAX_NAME_SIZE);
         return node_delete(successor, successor->index);
     } else if (current->left != NULL) {
         current->index = current->left->index;
-        strcpy(current->name, current->left->name);
+        strncpy(current->name, current->left->name, MAX_NAME_SIZE);
         current->left = current->left->left;
         node_free(current->left);
+        current->left = NULL;
     } else if (current->right != NULL) {
         current->index = current->right->index;
-        strcpy(current->name, current->right->name);
+        strncpy(current->name, current->right->name, MAX_NAME_SIZE);
         current->right = current->right->right;
         node_free(current->right);
+        current->right = NULL;
     } else {
         node_free(current);
+        current = NULL;
     }
-
-
 
     return 0;
 }
 
-static int tree_delete(tree_t *tree, int index) {
-
-    return node_delete(tree->root, index);
-}
+static int tree_delete(tree_t *tree, int index) { return node_delete(tree->root, index); }
 
 static void tree_print(tree_t *tree) { node_print(tree->root); }
 
@@ -220,6 +216,18 @@ int main(int ac, char **av) {
         exit(EXIT_FAILURE);
     }
 
+    if (tree_insert(&tree, 7, "johnny") != 0) {
+        fprintf(stderr, "Something bad happendes\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (tree_insert(&tree, 4, "tim") != 0) {
+        fprintf(stderr, "Something bad happendes\n");
+        exit(EXIT_FAILURE);
+    }
+
+
+
     tree_print(&tree);
 
     char resp[MAX_NAME_SIZE];
@@ -238,7 +246,7 @@ int main(int ac, char **av) {
 
     printf("after get\n");
 
-    if (tree_delete(&tree, 5) != 0) {
+    if (tree_delete(&tree, 8) != 0) {
         fprintf(stderr, "Something bad happendes\n");
         exit(EXIT_FAILURE);
     }
