@@ -102,7 +102,7 @@ static int untar_init(struct untar *u, struct appopts *opts) {
     }
 
     /* Enable all formats */
-    /*archive_read_support_filter_all(u->archive);*/
+    archive_read_support_filter_all(u->archive);
     archive_read_support_format_all(u->archive);
 
     size_t len = strlen(opts->filename);
@@ -111,7 +111,7 @@ static int untar_init(struct untar *u, struct appopts *opts) {
         return -ENOMEM;
     }
 
-    strncpy(opts->filename, u->filename, len);
+    strncpy(u->filename, opts->filename, len);
 
     len = strlen(opts->outdir);
     u->outdir = calloc(len + 1, sizeof(char));
@@ -119,7 +119,8 @@ static int untar_init(struct untar *u, struct appopts *opts) {
         return -ENOMEM;
     }
 
-    strncpy(opts->outdir, u->outdir, len);
+    strncpy(u->outdir, opts->outdir, len);
+    printf("Reading file %s\n", u->filename);
 
     if (archive_read_open_filename(u->archive, u->filename, 10240)) {
         fprintf(stderr, "Unable to open archive %s\n", archive_error_string(u->archive));
@@ -134,17 +135,14 @@ static int untar_print(struct untar *u) {
     int rc = ARCHIVE_OK;
 
     while (rc != ARCHIVE_EOF) {
-        printf("Reading entry\n");
         rc = archive_read_next_header(u->archive, &entry);
-        printf("Return value %d\n", rc);
         if (rc == ARCHIVE_FATAL) {
             fprintf(stderr, "An error happened %s\n", archive_error_string(u->archive));
             return -EINVAL;
         } else if (rc != ARCHIVE_EOF) {
+            printf("entry %s\n", archive_entry_pathname(entry));
             continue;
         }
-
-        printf("entry %s\n", archive_entry_pathname(entry));
     }
 
     return 0;
