@@ -85,90 +85,58 @@ static void appopts_free(struct appopts *opts) {
     }
 }
 
-struct untar {
-    struct archive *archive;
-    char *filename;
-    char *outdir;
-};
+static int untar_init(struct appopts *opts, struct archive **archive) {
+    struct archive *arch;
 
-static int untar_init(struct untar *u, struct appopts *opts) {
-    u->archive = NULL;
-    u->filename = NULL;
-    u->outdir = NULL;
-
-    u->archive = archive_read_new();
-    if (u->archive == NULL) {
+    arch = archive_read_new();
+    if (arch == NULL) {
         return -ENOMEM;
     }
 
     /* Enable all formats */
-    archive_read_support_filter_all(u->archive);
-    archive_read_support_format_all(u->archive);
+    archive_read_support_filter_all(arch);
+    archive_read_support_format_all(arch);
 
-    size_t len = strlen(opts->filename);
-    u->filename = calloc(len + 1, sizeof(char));
-    if (u->filename == NULL) {
-        return -ENOMEM;
-    }
-
-    strncpy(u->filename, opts->filename, len);
-
-    len = strlen(opts->outdir);
-    u->outdir = calloc(len + 1, sizeof(char));
-    if (u->outdir == NULL) {
-        return -ENOMEM;
-    }
-
-    strncpy(u->outdir, opts->outdir, len);
-    printf("Reading file %s\n", u->filename);
-
-    if (archive_read_open_filename(u->archive, u->filename, 10240)) {
-        fprintf(stderr, "Unable to open archive %s\n", archive_error_string(u->archive));
+    if (archive_read_open_filename(arch, opts->filename, 10240)) {
+        fprintf(stderr, "Unable to open archive %s\n", archive_error_string(arch));
         return -EIO;
     }
+
+    *archive = arch;
 
     return 0;
 }
 
-static int untar_print(struct untar *u) {
-    struct archive_entry *entry = NULL;
-    int rc = ARCHIVE_OK;
+static int untar_print_archive(struct appopts *opts) {
+    struct archive *archive;
+    int rc = untar_init(opts, &archive);
+    if (rc < 0) {
+        return rc;
+    }
 
+    struct archive_entry *entry = NULL;
     while (rc != ARCHIVE_EOF) {
-        rc = archive_read_next_header(u->archive, &entry);
+        rc = archive_read_next_header(archive, &entry);
         if (rc == ARCHIVE_FATAL) {
-            fprintf(stderr, "An error happened %s\n", archive_error_string(u->archive));
-            return -EINVAL;
+            fprintf(stderr, "An error happened %s\n", archive_error_string(archive));
+            rc = -EINVAL;
+            goto exit;
         } else if (rc != ARCHIVE_EOF) {
             printf("entry %s\n", archive_entry_pathname(entry));
             continue;
         }
     }
 
-    return 0;
-}
+    rc = 0;
 
-static void untar_free(struct untar *u) {
-    if (u == NULL) {
-        return;
-    }
+exit:
+    archive_read_free(archive);
+    return rc;
 
-    if (u->archive != NULL) {
-        archive_read_free(u->archive);
-    }
-
-    if (u->archive != NULL) {
-        free(u->filename);
-    }
-
-    if (u->outdir != NULL) {
-        free(u->outdir);
-    }
 }
 
 int main(int ac, char **av) {
     struct appopts opts;
-    struct untar untar;
     int rc = 0;
 
     rc = parse_appopts(ac, av, &opts);
@@ -188,18 +156,7 @@ int main(int ac, char **av) {
         goto exit;
     }
 
-    rc = untar_init(&untar, &opts);
-    if (rc != 0) {
-        goto free_untar;
-    }
-
-    rc = untar_print(&untar);
-    if (rc != 0) {
-        goto free_untar;
-    }
-
-free_untar:
-    untar_free(&untar);
+    rc = untar_print_archive(&opts);
 
 exit:
     appopts_free(&opts);
