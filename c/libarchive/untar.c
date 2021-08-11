@@ -99,6 +99,7 @@ static int untar_init(struct appopts *opts, struct archive **archive) {
 
     if (archive_read_open_filename(arch, opts->filename, 10240)) {
         fprintf(stderr, "Unable to open archive %s\n", archive_error_string(arch));
+        archive_read_free(arch);
         return -EIO;
     }
 
@@ -130,7 +131,90 @@ static int untar_print_archive(struct appopts *opts) {
     rc = 0;
 
 exit:
+    archive_read_close(archive);
     archive_read_free(archive);
+    return rc;
+
+}
+
+static int untar_copy(struct archive *read, struct archive *write) {
+    int rc = 0;
+    const void *bufptr;
+    size_t size;
+    off_t offset;
+
+    while (rc != ARCHIVE_EOF) {
+        rc = archive_read_data_block(read, &bufptr, &size, &offset);
+        if (rc != ARCHIVE_EOF && rc != ARCHIVE_OK) {
+            return rc;
+        }
+
+        if (rc == ARCHIVE_OK) {
+            rc = archive_write_data_block(write, bufptr, size, offset);
+            if (rc != ARCHIVE_OK) {
+                return rc;
+            }
+        }
+    }
+
+    return ARCHIVE_OK;
+}
+
+static int untar_extract_entry(struct archive *read, struct archive_entry *entry, 
+        struct archive *write) {
+
+    int rc = archive_write_header(write, entry);
+    if (rc != ARCHIVE_OK) {
+        return rc;
+    }
+
+    rc = untar_copy(read, write);
+    if (rc != ARCHIVE_OK) {
+        return rc;
+    }
+
+    return archive_write_finish_entry(write);
+}
+
+static int untar_extract_archive(struct appopts *opts) {
+    struct archive *readarch = NULL;
+
+    int rc = untar_init(opts, &readarch);
+    if (rc < 0) {
+        return -ENOMEM;
+    }
+
+    struct archive *writedir = archive_write_disk_new();
+    if (writedir == NULL) {
+        rc = -ENOMEM;
+        goto free_read;
+    }
+
+    struct archive_entry *entry = NULL;
+    rc = 0;
+    while (rc != ARCHIVE_EOF) {
+
+        rc = archive_read_next_header(readarch, &entry);
+        if (rc == ARCHIVE_FATAL) {
+            fprintf(stderr, "error occured %s\n", archive_error_string(readarch));
+            rc = -EINVAL;
+            goto free_all;
+        } else if (rc != ARCHIVE_EOF) {
+            rc = untar_extract_entry(readarch, entry, writedir);
+            if (rc != ARCHIVE_OK) {
+                goto free_all;
+            }
+        }
+    }
+
+free_all:
+    archive_write_close(writedir);
+    archive_write_free(writedir);
+
+free_read:
+    archive_read_close(readarch);
+    archive_read_free(readarch);
+
     return rc;
 
 }
@@ -157,6 +241,12 @@ int main(int ac, char **av) {
     }
 
     rc = untar_print_archive(&opts);
+    if (rc < 0) {
+        fprintf(stderr, "Error during printing the archive for %s\n", opts.filename);
+        goto exit;
+    }
+
+    rc = untar_extract_archive(&opts);
 
 exit:
     appopts_free(&opts);
