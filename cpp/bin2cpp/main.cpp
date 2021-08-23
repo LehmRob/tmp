@@ -3,30 +3,50 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 
 #include <errno.h>
 #include <getopt.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include "config.h"
 
 namespace {
 
-void printUsage(const char *arg0) {
+void printUsage(std::string &arg0) {
     printf("Usage %s: [-i inputfile] [-o outputfile.h] [-t type] [-n num] [-hc] -a "
            "varname \n"
            "\t-t type: one of the different types is possible: char, uint8\n"
            "\t-n num: number of elements in a row\n"
            "\t-c : uses plain c arrays, if not set c++ std::arrays are used\n"
            "\t-h : show help text\n",
-        arg0);
+        arg0.c_str());
 }
 
-} // namespace
+void printVersion(std::string &arg0) {
+    printf(
+        "%s v%s-%s [%s] %s\n", arg0.c_str(), kVersion, kGitRev, kGitBranch, kBuildtime);
+}
 
 typedef enum varType {
     charType,
     uint8Type,
 } varType;
 
-static int openFiles(const char *infile, FILE **in, const char *outfile, FILE **out) {
+bool getFileSize(FILE *file, size_t *size) {
+    struct stat stat;
+    if (fstat(fileno(file), &stat)) {
+        return false;
+    }
+
+    *size = stat.st_size;
+
+    return true;
+}
+
+int openFiles(const char *infile, FILE **in, const char *outfile, FILE **out) {
     if (infile != nullptr) {
         *in = std::fopen(infile, "r");
         if (in == nullptr) {
@@ -36,15 +56,19 @@ static int openFiles(const char *infile, FILE **in, const char *outfile, FILE **
 
     if (outfile != nullptr) {
         *out = std::fopen(outfile, "w+");
-        if (out != nullptr) {
+        if (out == nullptr) {
             return -EIO;
         }
     }
     return 0;
 }
 
-static int prepareHeader(
-    FILE *in, FILE *out, const char *varname, varType vType, bool plainC) {
+int prepareHeader(FILE *in, FILE *out, const char *varname, varType vType, bool plainC) {
+    size_t insize = 0;
+    if (!getFileSize(in, &insize)) {
+        return -EIO;
+    }
+
     fprintf(out, "// This is a generated file by bin2cpp\n");
     fprintf(out, "#pragma once\n");
 
@@ -53,33 +77,43 @@ static int prepareHeader(
         fprintf(out, "// clang-format off\n");
 
         if (vType == charType) {
-            fprintf(out, "char %s[] = {\n", varname);
+            fprintf(out, "char %s[%lu] = {\n", varname, insize);
         } else if (vType == uint8Type) {
-            fprintf(out, "uint8_t %s[] = {\n", varname);
+            fprintf(out, "uint8_t %s[%lu] = {\n", varname, insize);
         }
     } else {
-        // TODO: std::array needs the length at compile time
-        return -EINVAL;
+        fprintf(out, "#include <cstdint>\n\n");
+        fprintf(out, "#include <array>\n\n");
+        fprintf(out, "// clang-format off\n");
+
+        if (vType == charType) {
+            fprintf(out, " std::array<char, %lu> %s = {\n", insize, varname);
+        } else if (vType == uint8Type) {
+            fprintf(out, " std::array<uint8_t, %lu> %s = {\n", insize, varname);
+        }
     }
 
     return 0;
 }
 
-static int bin2cpp(const char *infile, const char *outfile, const char *varname,
-    varType vType, int numPerLine, bool plainC) {
+int bin2cpp(const char *infile, const char *outfile, const char *varname, varType vType,
+    int numPerLine, bool plainC) {
 
     FILE *in = stdin;
     FILE *out = stdout;
 
     if (openFiles(infile, &in, outfile, &out)) {
+        fprintf(stderr, "can't open files\n");
         return -EIO;
     }
 
     if (prepareHeader(in, out, varname, vType, plainC)) {
+        fprintf(stderr, "can't prepare header\n");
         return -EIO;
     }
 
     auto closeFiles = [&]() {
+        fflush(out);
         fclose(in);
         fclose(out);
     };
@@ -116,6 +150,8 @@ static int bin2cpp(const char *infile, const char *outfile, const char *varname,
     return 0;
 }
 
+} // namespace
+
 int main(int ac, char *av[]) {
     int opt = 0;
 
@@ -126,7 +162,7 @@ int main(int ac, char *av[]) {
     int numPerLine = 10;
     bool plainC = false;
 
-    while ((opt = getopt(ac, av, "i:o:t:n:hca:")) != -1) {
+    while ((opt = getopt(ac, av, "i:o:t:n:hca:v")) != -1) {
         switch (opt) {
         case 'i':
             infile = strdup(optarg);
@@ -150,9 +186,16 @@ int main(int ac, char *av[]) {
         case 'a':
             varname = strdup(optarg);
             break;
-        case 'h':
-            printUsage(av[0]);
+        case 'h': {
+            std::string name(av[0]);
+            printUsage(name);
             return 0;
+        }
+        case 'v': {
+            std::string name(av[0]);
+            printVersion(name);
+            return 0;
+        }
         }
     }
 
