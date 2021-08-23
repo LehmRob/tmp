@@ -1,9 +1,0 @@
-// Copyright (c) 2021 Robert Lehmann (c) lehmrob@posteo.net
-
-#pragma once
-
-const char *kGitBranch = "@GIT_BRANCH@";
-const char *kGitRev = "@GIT_REV@";
-const char *kBuildtime = "@BUILDTIME@";
-
-const char *kVersion = "@CMAKE_PROJECT_VERSION@";
