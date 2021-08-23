@@ -11,7 +11,21 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "config.h"
+#ifndef BUILDTIME
+#define BUILDTIME "unknown"
+#endif // BUILDTIME
+
+#ifndef GIT_REV
+#define GIT_REV "unknown"
+#endif // GIT_REV
+
+#ifndef GIT_BRANCH
+#define GIT_BRANCH "unknown"
+#endif // GIT_BRANCH
+
+#ifndef APP_VERSION
+#define APP_VERSION "unknown"
+#endif // APP_VERSION
 
 namespace {
 
@@ -20,14 +34,15 @@ void printUsage(std::string &arg0) {
            "varname \n"
            "\t-t type: one of the different types is possible: char, uint8\n"
            "\t-n num: number of elements in a row\n"
-           "\t-c : uses plain c arrays, if not set c++ std::arrays are used\n"
+           "\t-c: uses plain c arrays, if not set c++ std::arrays are used\n"
+           "\t-v: show version\n"
            "\t-h : show help text\n",
         arg0.c_str());
 }
 
 void printVersion(std::string &arg0) {
     printf(
-        "%s v%s-%s [%s] %s\n", arg0.c_str(), kVersion, kGitRev, kGitBranch, kBuildtime);
+        "%s v%s-%s [%s] %s\n", arg0.c_str(), APP_VERSION, GIT_REV, GIT_BRANCH, BUILDTIME);
 }
 
 typedef enum varType {
