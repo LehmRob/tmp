@@ -30,13 +30,15 @@
 namespace {
 
 void printUsage(std::string &arg0) {
-    printf("Usage %s: [-i inputfile] [-o outputfile.h] [-t type] [-n num] [-hc] -a "
-           "varname \n"
-           "\t-t type: one of the different types is possible: char, uint8\n"
-           "\t-n num: number of elements in a row\n"
-           "\t-c: uses plain c arrays, if not set c++ std::arrays are used\n"
-           "\t-v: show version\n"
-           "\t-h : show help text\n",
+    printf(
+        "Usage %s: [-i inputfile] [-o outputfile.h] [-t type] [-n num] [-l num] [-hc] -a "
+        "varname \n"
+        "\t-t type: one of the different types is possible: char, uint8\n"
+        "\t-n num:  number of elements in a row\n"
+        "\t-c:      uses plain c arrays, if not set c++ std::arrays are used\n"
+        "\t-l num:  size to read from file in bytes\n"
+        "\t-v:      show version\n"
+        "\t-h:      show help text\n",
         arg0.c_str());
 }
 
@@ -78,7 +80,8 @@ int openFiles(const char *infile, FILE **in, const char *outfile, FILE **out) {
     return 0;
 }
 
-int prepareHeader(FILE *in, FILE *out, const char *varname, varType vType, bool plainC) {
+int prepareHeader(
+    FILE *in, FILE *out, const char *varname, varType vType, bool plainC, size_t size) {
     size_t insize = 0;
     if (!getFileSize(in, &insize)) {
         return -EIO;
@@ -112,8 +115,7 @@ int prepareHeader(FILE *in, FILE *out, const char *varname, varType vType, bool 
 }
 
 int bin2cpp(const char *infile, const char *outfile, const char *varname, varType vType,
-    int numPerLine, bool plainC) {
-
+    int numPerLine, bool plainC, size_t size = 0) {
     FILE *in = stdin;
     FILE *out = stdout;
 
@@ -122,7 +124,7 @@ int bin2cpp(const char *infile, const char *outfile, const char *varname, varTyp
         return -EIO;
     }
 
-    if (prepareHeader(in, out, varname, vType, plainC)) {
+    if (prepareHeader(in, out, varname, vType, plainC, size)) {
         fprintf(stderr, "can't prepare header\n");
         return -EIO;
     }
@@ -135,6 +137,7 @@ int bin2cpp(const char *infile, const char *outfile, const char *varname, varTyp
 
     bool eof = false;
     std::array<uint8_t, 256> lineBuffer = {0};
+    size_t rsize = {0};
 
     while (!eof) {
         auto rbytes = std::fread(lineBuffer.data(), sizeof(uint8_t), numPerLine, in);
@@ -157,6 +160,11 @@ int bin2cpp(const char *infile, const char *outfile, const char *varname, varTyp
             }
         }
         std::fprintf(out, "\n");
+
+        rsize += rbytes;
+        if (size > 0 && rsize >= size) {
+            eof = true;
+        }
     }
 
     std::fprintf(out, "};\n");
@@ -176,8 +184,9 @@ int main(int ac, char *av[]) {
     varType vType = charType;
     int numPerLine = 10;
     bool plainC = false;
+    size_t readSize = 0; // readSize is the size of the file which will be read
 
-    while ((opt = getopt(ac, av, "i:o:t:n:hca:v")) != -1) {
+    while ((opt = getopt(ac, av, "i:o:t:n:hca:vl:")) != -1) {
         switch (opt) {
         case 'i':
             infile = strdup(optarg);
@@ -211,6 +220,10 @@ int main(int ac, char *av[]) {
             printVersion(name);
             return 0;
         }
+        case 'l': {
+            readSize = std::atoi(optarg);
+            break;
+        }
         }
     }
 
@@ -219,7 +232,7 @@ int main(int ac, char *av[]) {
         return -EINVAL;
     }
 
-    auto rc = bin2cpp(infile, outfile, varname, vType, numPerLine, plainC);
+    auto rc = bin2cpp(infile, outfile, varname, vType, numPerLine, plainC, readSize);
     if (rc) {
         return rc;
     }
