@@ -99,9 +99,9 @@ int prepareHeader(
         fprintf(out, "// clang-format off\n");
 
         if (vType == charType) {
-            fprintf(out, "char %s[%lu] = {\n", varname, insize);
+            fprintf(out, "const char %s[%lu] = {\n", varname, insize);
         } else if (vType == uint8Type) {
-            fprintf(out, "uint8_t %s[%lu] = {\n", varname, insize);
+            fprintf(out, "const uint8_t %s[%lu] = {\n", varname, insize);
         }
     } else {
         fprintf(out, "#include <cstdint>\n\n");
@@ -109,9 +109,9 @@ int prepareHeader(
         fprintf(out, "// clang-format off\n");
 
         if (vType == charType) {
-            fprintf(out, " std::array<char, %lu> %s = {\n", insize, varname);
+            fprintf(out, "const std::array<char, %lu> %s = {\n", insize, varname);
         } else if (vType == uint8Type) {
-            fprintf(out, " std::array<uint8_t, %lu> %s = {\n", insize, varname);
+            fprintf(out, "const std::array<uint8_t, %lu> %s = {\n", insize, varname);
         }
     }
 
@@ -119,7 +119,7 @@ int prepareHeader(
 }
 
 int bin2cpp(const char *infile, const char *outfile, const char *varname, varType vType,
-    int numPerLine, bool plainC, size_t size = 0) {
+    int numPerLine, bool plainC, size_t overall_size = 0) {
     FILE *in = stdin;
     FILE *out = stdout;
 
@@ -128,7 +128,7 @@ int bin2cpp(const char *infile, const char *outfile, const char *varname, varTyp
         return -EIO;
     }
 
-    if (prepareHeader(in, out, varname, vType, plainC, size)) {
+    if (prepareHeader(in, out, varname, vType, plainC, overall_size)) {
         fprintf(stderr, "can't prepare header\n");
         return -EIO;
     }
@@ -141,7 +141,7 @@ int bin2cpp(const char *infile, const char *outfile, const char *varname, varTyp
 
     bool eof = false;
     std::array<uint8_t, 256> lineBuffer = {0};
-    size_t rsize = {0};
+    size_t data_written = {0};
 
     while (!eof) {
         auto rbytes = std::fread(lineBuffer.data(), sizeof(uint8_t), numPerLine, in);
@@ -155,8 +155,12 @@ int bin2cpp(const char *infile, const char *outfile, const char *varname, varTyp
         }
 
         std::fprintf(out, "    ");
+        auto to_write = rbytes;
+        if (data_written + to_write > overall_size) {
+            to_write = overall_size - data_written;
+        }
 
-        for (int i = 0; i < rbytes; i++) {
+        for (int i = 0; i < to_write; i++) {
             if (i == (rbytes - 1)) {
                 std::fprintf(out, "0x%02x,", lineBuffer[i]);
             } else {
@@ -165,8 +169,8 @@ int bin2cpp(const char *infile, const char *outfile, const char *varname, varTyp
         }
         std::fprintf(out, "\n");
 
-        rsize += rbytes;
-        if (size > 0 && rsize >= size) {
+        data_written += rbytes;
+        if (overall_size > 0 && data_written >= overall_size) {
             eof = true;
         }
     }
