@@ -53,6 +53,10 @@ typedef enum varType {
 } varType;
 
 bool getFileSize(FILE *file, size_t *size) {
+    if (*size > 0) {
+        return true;
+    }
+
     struct stat stat;
     if (fstat(fileno(file), &stat)) {
         return false;
@@ -82,7 +86,7 @@ int openFiles(const char *infile, FILE **in, const char *outfile, FILE **out) {
 
 int prepareHeader(
     FILE *in, FILE *out, const char *varname, varType vType, bool plainC, size_t size) {
-    size_t insize = 0;
+    size_t insize = size;
     if (!getFileSize(in, &insize)) {
         return -EIO;
     }
